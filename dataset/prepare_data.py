@@ -5,8 +5,6 @@ NOTE: You will want to do this using several processes. I did this on an AWS mac
 as that's where I had the deduplicated RealNews dataset.
 """
 import argparse
-import ujson as json
-# from sample.encoder import get_encoder, tokenize_for_grover_training, detokenize, sliding_window, create_int_feature
 import random
 import tensorflow as tf
 import collections
@@ -66,7 +64,7 @@ random.seed(args.seed + args.fold)
 
 #encoder = get_encoder()
 tokenizer = tokenization.FullTokenizer(
-    vocab_file="bert-base-chinese-vocab.txt", do_lower_case=True)
+    vocab_file="tokenization/bert-base-chinese-vocab.txt", do_lower_case=True)
 
 
 class S3TFRecordWriter(object):
@@ -141,27 +139,23 @@ def article_iterator(tokenizer):
     assert os.path.exists(args.input_fn)
     for (dirpath, dirnames, filenames) in os.walk(args.input_fn):
         for filename in filenames:
-            with open(os.path.join(dirpath, filename), 'r') as f:
-                for l_no, l in enumerate(f):
-                    if l_no % args.num_folds == args.fold:
-                        article = json.loads(l)
-
-                        line = tokenization.convert_to_unicode(
-                            article['text'])  # for news2016zh text body
-                        tokens = tokenizer.tokenize(line)
-                        input_ids = tokenizer.convert_tokens_to_ids(tokens)
-
-                        article['input_ids'] = input_ids
-
-                        article['inst_index'] = (l_no // args.num_folds)
-                        if article['inst_index'] < 100:
-                            print('---\nINPUT{}. {}\n---\nTokens: {}\n'.format(article['inst_index'],
-                                                                            tokens,
-                                                                            input_ids
-                                                                            ), flush=True)
-                        if len(article['input_ids']) <= 64:  # min size of article
-                            continue
-                        yield article
+            with open(os.path.join(dirpath, filename), 'r', encoding="utf-8") as f:
+                lines = f.readlines()
+            lines = [line for line in lines]
+            for l_no, l in enumerate(lines):
+                article = {}
+                article['text'] = l
+                line = tokenization.convert_to_unicode(article['text'])  # for news2016zh text body
+                tokens = tokenizer.tokenize(line)
+                input_ids = tokenizer.convert_tokens_to_ids(tokens)
+                article['input_ids'] = input_ids
+                article['inst_index'] = (l_no // args.num_folds)
+                if article['inst_index'] < 100:
+                    print('---\nINPUT{}. {}\n---\nTokens: {}\n'.format(article['inst_index'], tokens, input_ids),
+                          flush=True)
+                if len(article['input_ids']) <= 64:  # min size of article
+                    continue
+                yield article
 
 
 def create_int_feature(values):

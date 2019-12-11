@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
+
 NUM_FOLDS=1024
 MAX_SEQ_LENGTH=1024
-FN=${1}
-OUT_BUCKET=${2}
+FN=dataset/data
+OUT_BUCKET=dataset/tf
 
-rm -rf logs_${MAX_SEQ_LENGTH}
-mkdir logs_${MAX_SEQ_LENGTH}
-parallel -j $(nproc --all) --will-cite "python prepare_data.py -fold {1} -num_folds ${NUM_FOLDS} -base_fn gs://${OUT_BUCKET}/data_${MAX_SEQ_LENGTH}/ -input_fn ${FN} -max_seq_length ${MAX_SEQ_LENGTH} > logs_${MAX_SEQ_LENGTH}/log{1}.txt" ::: $(seq 0 $((${NUM_FOLDS}-1)))
+#PYTHONPATH=$(pwd) python dataset/prepare_data.py -fold=1 -num_folds=1024 -base_fn=dataset/tf/data_1024 -input_fn=dataset/data -max_seq_length=1024 > tf_log.txt

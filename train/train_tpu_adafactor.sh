@@ -46,3 +46,5 @@ python train.py \
     --tpu_name=$(hostname) \
     --num_tpu_cores=$num_tpu_cores \
     --init_checkpoint=${init_checkpoint}
+
+PYTHONPATH=$(pwd) python train/train.py --config_file=configs/mega.json --input_file=dataset/tf/data_1024train_wiki19_0001.tfrecord --output_dir=dataset/output/ --max_seq_length=1024 --train_batch_size=512 --learning_rate=1e-4 --num_train_steps=800000 --num_warmup_steps=10000 --save_checkpoints_steps=1000 --iterations_per_loop=1000 --use_tpu=True --tpu_name=819c64c5f479 --num_tpu_cores=256 --init_checkpoint=models/mega/model.ckpt-100000

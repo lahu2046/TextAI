@@ -6,6 +6,7 @@ import re
 
 import tensorflow as tf
 import numpy as np
+import requests
 
 from train.modeling import GroverModel, GroverConfig, sample
 from tokenization import tokenization
@@ -14,6 +15,7 @@ from tokenization import tokenization
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
 from tensorflow.python.util import deprecation
+
 deprecation._PRINT_DEPRECATION_WARNINGS = False
 try:
     from tensorflow.python.util import module_wrapper as deprecation
@@ -114,10 +116,34 @@ parser.add_argument(
 parser.add_argument(
     '-samples',
     dest='samples',
-    default=5,
+    default=2,
     type=int,
     help='num_samples',
 )
+parser.add_argument(
+    '-inp_text',
+    dest='inp_text',
+    default=None,
+    type=str,
+    help='input_text',
+)
+
+parser.add_argument(
+    '-id',
+    dest='id',
+    default=None,
+    type=int,
+    help='people id',
+)
+
+parser.add_argument(
+    '-type',
+    dest='type',
+    default=None,
+    type=int,
+    help='operation type',
+)
+
 
 def extract_generated_target(output_tokens, tokenizer):
     """
@@ -139,10 +165,11 @@ def extract_generated_target(output_tokens, tokenizer):
         'end_ind': end_ind,
     }
 
+
 args = parser.parse_args()
 proj_root_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 vocab_file_path = os.path.join(proj_root_path, "tokenization/bert-base-chinese-vocab.txt")
-tokenizer = tokenization.FullTokenizer(vocab_file=vocab_file_path , do_lower_case=True)
+tokenizer = tokenization.FullTokenizer(vocab_file=vocab_file_path, do_lower_case=True)
 news_config = GroverConfig.from_json_file(args.model_config_fn)
 
 # We might have to split the batch into multiple chunks if the batch size is too large
@@ -169,8 +196,13 @@ with tf.Session(config=tf_config, graph=tf.Graph()) as sess:
 
     saver = tf.train.Saver()
     saver.restore(sess, args.model_ckpt)
-    print('🍺Model loaded. \nInput something please:⬇️')
-    text = input()
+    inp_text = args.inp_text
+    if not inp_text:
+        print('🍺Model loaded. \nInput something please:⬇️')
+        text = input()
+    else:
+        text = inp_text
+
     while text != "":
         for i in range(args.samples):
             print("Sample,", i + 1, " of ", args.samples)
@@ -195,7 +227,19 @@ with tf.Session(config=tf_config, graph=tf.Graph()) as sess:
                     extraction = extract_generated_target(output_tokens=t_i, tokenizer=tokenizer)
                     gens.append(extraction['extraction'])
 
-            l = re.findall('.{1,70}', gens[0].replace('[UNK]', '').replace('##', ''))
-            print("\n".join(l))
-        print('Next try:⬇️')
-        text = input()
+            text_data = "\n".join(re.findall('.{1,70}', gens[0].replace('[UNK]', '').replace('##', '')))
+            print(text_data)
+            if inp_text:
+                json_data = {
+                    "id": args.id,
+                    "type": args.type,
+                    "status": 1,
+                    "results": [text_data]
+                }
+                requests.post("http://10.huangtongwei.cn:8099/v1/ai/result", json=json_data)
+
+        if inp_text:
+            break
+        else:
+            print('Next try:⬇️')
+            text = input()
