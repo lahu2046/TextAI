@@ -16,6 +16,10 @@ args = parser.parse_args()
 t = args.t
 print("当前轮询时间：{}秒".format(t))
 
+requests.adapters.DEFAULT_RETRIES = 5
+s = requests.session()
+s.keep_alive = False
+
 
 def main():
     num = 0
@@ -23,7 +27,7 @@ def main():
         num += 1
         time.sleep(t)
         try:
-            rs_json = requests.get("http://10.huangtongwei.cn:8099/v1/ai/task").json()
+            rs_json = s.get("http://10.huangtongwei.cn:8099/v1/ai/task").json()
         except Exception as e:
             print(e)
             input("请求异常，请检测问题, 按回车重试")
